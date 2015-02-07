@@ -1,6 +1,7 @@
 require 'capybara'
 require 'capybara/poltergeist'
 require 'capybara/dsl'
+require 'pry'
 
 class FitocracyScraper
   include Capybara::DSL
@@ -9,26 +10,24 @@ class FitocracyScraper
     @username = username
     @password = password
 
-    Capybara.current_driver = :poltergeist
-    Capybara.app_host = 'http://www.fitocracy.com'
+    Capybara.current_driver    = :poltergeist
+    Capybara.app_host          = 'http://www.fitocracy.com'
     Capybara.default_wait_time = 20
   end
 
   def log_in
-    print "Logging in... "
+    print 'Logging in... '
     visit '/'
-    click_on "Log in"
-    find('.login-username-link').click
 
-    within '#username-login-modal' do
-      fill_in :username, with: @username
-      fill_in :password, with: @password
+    within 'form#login-modal-form', visible: false do
+      find(:xpath, '//*[@id="login-modal-form"]/div[2]/div[1]/input', visible: false).set @username
+      find(:xpath, '//*[@id="login-modal-form"]/div[2]/div[2]/input', visible: false).set @password
 
-      click_on "Log in"
+      page.execute_script("$('form#login-modal-form').submit()")
     end
 
     wait_for_home_page_load
-    puts "success!"
+    puts 'success!'
   end
 
   def export_all
@@ -45,12 +44,12 @@ class FitocracyScraper
 
     select name
     current_window_count = page.driver.browser.window_handles.length
-    click_on "CSV"
+    click_on 'CSV'
     wait_until { page.driver.browser.window_handles.length == current_window_count + 1 }
 
     within_window page.driver.browser.window_handles.last do
-      csv = current_csv
-      filename = "#{name.gsub(' ', '_').gsub(/\W/, '').downcase}.csv"
+      csv      = current_csv
+      filename = "#{Dir.home}/Dropbox/fitness/fitocracy/data#{name.gsub(' ', '_').gsub(/\W/, '').downcase}.csv"
       File.open(filename, 'w') { |file| file.write(csv) }
 
       puts "wrote #{csv.split("\n").length - 1} sets to #{filename}"
@@ -63,7 +62,7 @@ class FitocracyScraper
   end
 
   def exercise_list
-    all("select#history_activity_chooser option").to_a.map do |option|
+    all('select#history_activity_chooser option').to_a.map do |option|
       option.text
     end
   end
@@ -74,7 +73,7 @@ class FitocracyScraper
   end
 
   def wait_for_performance_page_load
-    wait_until { page.has_css? "select#history_activity_chooser" }
+    wait_until { page.has_css? 'select#history_activity_chooser' }
   end
 
   def wait_until
